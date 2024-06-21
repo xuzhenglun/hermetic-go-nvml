@@ -1,0 +1,46 @@
+module(
+    name = "hermetic_nvml",
+    version = "0.1.0",
+)
+
+bazel_dep(name = "hermetic_cc_toolchain", version = "3.1.0")
+bazel_dep(name = "rules_go", version = "0.48.0")
+bazel_dep(name = "gazelle", version = "0.36.0")
+
+go_sdk = use_extension("@rules_go//go:extensions.bzl", "go_sdk")
+
+go_sdk.download(
+    name = "go_sdk",
+    sdks = {
+        "{}_{}".format(goos, goarch): (
+            "go1.22.3.{}-{}.tar.gz".format(goos, goarch),
+            digest,
+        )
+        for (goarch, goos, digest) in [
+            ("amd64", "linux", "8920ea521bad8f6b7bc377b4824982e011c19af27df88a815e3586ea895f1b36"),
+            ("arm64", "linux", "6c33e52a5b26e7aa021b94475587fce80043a727a54ceb0eee2f9fc160646434"),
+            ("amd64", "darwin", "610e48c1df4d2f852de8bc2e7fd2dc1521aac216f0c0026625db12f67f192024"),
+            ("arm64", "darwin", "02abeab3f4b8981232237ebd88f0a9bad933bc9621791cd7720a9ca29eacbe9d"),
+        ]
+    },
+    urls = [
+        "https://gomirrors.org/dl/go/{}",
+        "https://mirrors.ustc.edu.cn/golang/{}",
+        "https://dl.google.com/go/{}",
+        "https://mirrors.aliyun.com/golang/{}",  # slow mirror 🐢
+    ],
+    version = "1.22.3",
+)
+
+toolchains = use_extension("@hermetic_cc_toolchain//toolchain:ext.bzl", "toolchains")
+
+use_repo(toolchains, "zig_sdk")
+
+go_deps = use_extension("@gazelle//:extensions.bzl", "go_deps")
+
+go_deps.from_file(go_mod = "//:go.mod")
+
+use_repo(
+    go_deps,
+    "com_github_nvidia_go_nvml",
+)
